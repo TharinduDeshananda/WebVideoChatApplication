@@ -18,12 +18,15 @@ io.on('connection',(socket)=>{
   console.log('client connected socket io');
   socket.on('create room',(clientPeerId)=>{
     let roomId = uuidV4();
+    socket.join(roomId);
+    console.log('room joined after creating by a client')
     ServerDataStructure.set(roomId,{hostPeerId:clientPeerId,guestsPeerIds:[]});
     socket.emit('room created',roomId);
     console.log('room created by peerID client: ',clientPeerId);
   });
   
   socket.on('join room',(joinRoomId,clientPeerId)=>{
+    socket.join(joinRoomId);
     let {hostPeerId,guestsPeerIds}=ServerDataStructure.get(joinRoomId);
     console.log(`***${hostPeerId}`);
     console.log(`***${guestsPeerIds}`);
@@ -36,6 +39,8 @@ io.on('connection',(socket)=>{
 
     socket.broadcast.to(joinRoomId).emit('user connected',clientPeerId);
     socket.emit('room joined',hostPeerId,guestsPeerIdsCopy);
+    console.log('sending existing',guestsPeerIdsCopy)
+    console.log('broadcasted');
   });
 
 })

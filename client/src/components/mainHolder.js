@@ -16,6 +16,7 @@ function MainVideoComponent(props) {
   let [guestPeerIds,setGuestPeerIds] = useState([]);
   let [ownSocketIO,setOwnSocketIO] = useState(null);
   let [roomID,setRoomID] = useState(null);
+  let [customAr,setCustomAr] = useState([{id1:12,id2:13},{id1:12,id2:13},{id1:12,id2:13},{id1:12,id2:13},]);
   useEffect(() => {
 
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia
@@ -50,11 +51,14 @@ function MainVideoComponent(props) {
       setGuestPeerIds([]);
       setRoomID(roomId);
       console.log('room created with room id: ',roomId);
+      window.alert(roomId);
     });
 
     ownSocketIO.on('user connected',(newUserPeerId)=>{
+      console.log('user connected');
       console.log('before guests',guestPeerIds);
-      setGuestPeerIds(guestPeerIds.push(newUserPeerId));
+      guestPeerIds.push(newUserPeerId)
+      setGuestPeerIds(guestPeerIds);
       console.log('after guests',guestPeerIds);
     });
 
@@ -73,7 +77,14 @@ function MainVideoComponent(props) {
       guestsCopy.forEach(element => {
         let guestCall=ownPeer.call(element,ownStream);
         guestCall.on('stream',remoteStream=>{
-          setGuestsStreams(guestsStreams.push(remoteStream));
+          console.log('called guests stream',remoteStream);
+          let flag=false;
+        guestsStreams.forEach((stream)=>{
+          if(stream.id==remoteStream.id){flag=true;}
+        })
+        if(flag){return;}
+          guestsStreams.push(remoteStream)
+          setGuestsStreams(guestsStreams.slice());/************ */
           
         })
       });
@@ -81,9 +92,16 @@ function MainVideoComponent(props) {
     });
 
     ownPeer.on('call',(call)=>{
+      console.log('call received by peer id: ',call.peer)
       call.answer(ownStream);
       call.on('stream',(remoteStream)=>{
-        setGuestsStreams(guestsStreams.push(remoteStream));
+        let flag=false;
+        guestsStreams.forEach((stream)=>{
+          if(stream.id==remoteStream.id){flag=true;}
+        })
+        if(flag){return;}
+        guestsStreams.push(remoteStream)
+        setGuestsStreams(guestsStreams.slice());/************** */
         console.log('guests streams 2',guestsStreams);
         console.log('hosts stream 2',hostStream);
       })
@@ -118,13 +136,21 @@ function MainVideoComponent(props) {
       <button onClick={joinRoom}>Join Room</button>
       <br />
       <button onClick={createRoom}>Create Room</button>
-      <div><VideoComp streamObj={ownStream}/></div>
-      <div>{hostStream?<VideoComp streamObj={hostStream}/>:null}</div>
+      <div><div>Own Stream</div><VideoComp streamObj={ownStream}/></div>
+      <div><div>Host Stream</div>{(hostStream)?<VideoComp streamObj={hostStream}/>:null}</div>
       <div>
-        {guestsStreams.length==0?guestsStreams.map(value=>{
-          return <VideoComp streamObj={value}/>;
-        }):null}
+      <div>Guests Streams</div>
+        {guestsStreams.map((stream)=>{
+          return <VideoComp streamObj={stream}/>
+        })}
       </div>
+      <button onClick={()=>{
+        guestsStreams.map(stream=>{
+          console.log(stream.id);
+        })
+        console.log('host stream',hostStream.id);
+
+      }}>get guest streams</button>
     </div>
   );
 }
