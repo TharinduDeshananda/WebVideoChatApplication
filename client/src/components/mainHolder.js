@@ -4,6 +4,8 @@ import reactDom from "react-dom";
 import { io } from "socket.io-client";
 import { VideoComp } from "./videoComp";
 import VideoAppBar from "./video_app_bar";
+import MiniVideoComp from "./mini-video-comp";
+import "./main-comp.css";
 function MainVideoComponent(props) {
   let joinRoomInputField = useRef(null);
   let [joinRoomInputFieldValue, setJoinRoomInputFieldValue] = useState("");
@@ -137,7 +139,7 @@ function MainVideoComponent(props) {
   }
 
   return (
-    <div>
+    <div className="main-comp">
       <input
         type="text"
         ref={joinRoomInputField}
@@ -150,33 +152,45 @@ function MainVideoComponent(props) {
       <button onClick={createRoom}>Create Room</button>
       <div>
         <div>Own Stream</div>
-        {!hostStream ? <VideoComp streamObj={ownStream} /> : null}
+        {!hostStream ? (
+          <div
+            style={{
+              width: "800px",
+              height: "600px",
+              position: "relative",
+              backgroundColor: "red",
+              zIndex: "1",
+            }}
+          >
+            <VideoComp streamObj={ownStream} />
+          </div>
+        ) : null}
       </div>
       <div>
         <div>Host Stream</div>
         {hostStream ? (
-          <div style={{width:"800px",height:"600px",position:"relative",backgroundColor:'red',zIndex:"1"}}>
+          <div
+            style={{
+              width: "800px",
+              height: "600px",
+              position: "relative",
+              backgroundColor: "red",
+              zIndex: "1",
+            }}
+          >
             <VideoComp streamObj={hostStream} />
             <VideoAppBar />
           </div>
         ) : null}
       </div>
-      <div>
-        <div>Guests Streams</div>
+      <div>Guests Streams</div>
+      <div className="mini-guest-videos">
+        
         {guestsStreams.map((stream) => {
-          return <VideoComp streamObj={stream} />;
+          return <MiniVideoComp streamObj={stream} />;
         })}
       </div>
-      <button
-        onClick={() => {
-          guestsStreams.map((stream) => {
-            console.log(stream.id);
-          });
-          console.log("host stream", hostStream.id);
-        }}
-      >
-        get guest streams
-      </button>
+      
     </div>
   );
 }
