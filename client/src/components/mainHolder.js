@@ -16,7 +16,7 @@ function MainVideoComponent(props) {
   let [guestPeerIds,setGuestPeerIds] = useState([]);
   let [ownSocketIO,setOwnSocketIO] = useState(null);
   let [roomID,setRoomID] = useState(null);
-  let [customAr,setCustomAr] = useState([{id1:12,id2:13},{id1:12,id2:13},{id1:12,id2:13},{id1:12,id2:13},]);
+  
   useEffect(() => {
 
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia
