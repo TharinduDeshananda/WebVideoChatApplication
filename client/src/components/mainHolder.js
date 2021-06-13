@@ -19,6 +19,7 @@ function MainVideoComponent(props) {
   let [ownSocketIO, setOwnSocketIO] = useState(null);
   let [roomID, setRoomID] = useState(null);
   let [guestUsers, setGuestUsers] = useState([]);
+  let [guestCallsStruct,setGuestCallsStruct] = useState([]);
 
   useEffect(() => {
     navigator.getUserMedia =
@@ -26,9 +27,14 @@ function MainVideoComponent(props) {
       navigator.webkitGetUserMedia ||
       navigator.mozGetUserMedia;
 
-    navigator.getUserMedia({ audio: true, video: true }, (stream) => {
+    if(!navigator.getUserMedia){
+      navigator.mediaDevices.getUserMedia({ audio: true, video: true }, (stream) => {
+        setOwnStream(stream);
+      });
+    }
+    else{navigator.getUserMedia({ audio: true, video: true }, (stream) => {
       setOwnStream(stream);
-    });
+    });}
     let socket = io("http://localhost:3300/");
     setOwnSocketIO(socket);
     let peer = new Peer(undefined, {
@@ -37,6 +43,7 @@ function MainVideoComponent(props) {
       key: "peerjs",
       path: "/",
     });
+    
     setOwnPeer(peer);
     peer.on("open", (id) => {
       setOwnPeerId(id);
@@ -73,6 +80,8 @@ function MainVideoComponent(props) {
       setHostPeerId(hostCopy);
       setGuestPeerIds(guestsCopy);
       let hostCall = ownPeer.call(hostCopy, ownStream);
+      guestCallsStruct.push(hostCall);//****************************************** */
+      setGuestCallsStruct(guestCallsStruct.slice());//**************************** */
       hostCall.on("stream", (remoteStream) => {
         setHostStream(remoteStream);
         console.log("set host stream", remoteStream);
@@ -80,6 +89,8 @@ function MainVideoComponent(props) {
 
       guestsCopy.forEach((element) => {
         let guestCall = ownPeer.call(element, ownStream);
+        guestCallsStruct.push(guestCall);//****************************************** */
+        setGuestCallsStruct(guestCallsStruct.slice());//**************************** */
         guestCall.on("stream", (remoteStream) => {
           console.log("called guests stream", remoteStream);
           let flag = false;
@@ -91,6 +102,7 @@ function MainVideoComponent(props) {
           if (flag) {
             return;
           }
+          
           guestsStreams.push(remoteStream);
           setGuestsStreams(guestsStreams.slice()); /************ */
         });
@@ -98,7 +110,9 @@ function MainVideoComponent(props) {
     });
 
     ownPeer.on("call", (call) => {
-      console.log("call received by peer id: ", call.peer);
+      guestCallsStruct.push(call);
+      setGuestCallsStruct(guestCallsStruct.slice());
+      console.log('****-----*****',call);
       call.answer(ownStream);
       call.on("stream", (remoteStream) => {
         let flag = false;
@@ -110,6 +124,7 @@ function MainVideoComponent(props) {
         if (flag) {
           return;
         }
+        
         guestsStreams.push(remoteStream);
         setGuestsStreams(guestsStreams.slice()); /************** */
         console.log("guests streams 2", guestsStreams);
@@ -137,6 +152,47 @@ function MainVideoComponent(props) {
     ownSocketIO.emit("join room", joinRoomInputFieldValue, ownPeerId);
     console.log("joinroominputfieldvalue", joinRoomInputFieldValue);
   }
+
+  function getHostAbility(){}
+  
+  function removeAudioTrack(){}
+  function removeVideoTrack(){}
+  function addVideoTrack(){}
+  function addAudioTrack(){}
+  async function shareScreen(){
+    
+    try{
+      navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia
+      || navigator.mozGetUserMedia;
+
+      const shareStream = await navigator.mediaDevices.getDisplayMedia(
+        {video: {cursor:'always'}, audio: false});
+
+      let existingTracks = ownStream.getVideoTracks();
+      let shareTracks = shareStream.getVideoTracks();
+      let videoTrack = shareTracks[0];
+      guestCallsStruct.forEach((gcall)=>{
+        let sender = gcall.peerConnection.getSenders().find(function(s) {
+          return s.track.kind == videoTrack.kind;
+        });
+        console.log('found sender:', sender);
+        sender.replaceTrack(videoTrack);
+      });
+
+
+
+      existingTracks.forEach(track=>{
+      ownStream.removeTrack(track);
+        
+      })
+      console.log('existing tracks removed: ',existingTracks.length);
+      shareStream.getVideoTracks().forEach(htrack=>{
+        ownStream.addTrack(htrack);
+      })
+    }catch(e){console.log(e);}
+  }
+  function messageAll(){}
+  function raiseHand(){}
 
   return (
     <div className="main-comp">
@@ -179,7 +235,7 @@ function MainVideoComponent(props) {
             }}
           >
             <VideoComp streamObj={hostStream} />
-            <VideoAppBar />
+            <VideoAppBar share={shareScreen}/>
           </div>
         ) : null}
       </div>
