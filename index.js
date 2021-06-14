@@ -38,9 +38,15 @@ io.on('connection',(socket)=>{
     console.log('after guests',guestsPeerIds);
 
     socket.broadcast.to(joinRoomId).emit('user connected',clientPeerId);
-    socket.emit('room joined',hostPeerId,guestsPeerIdsCopy);
+    socket.emit('room joined',hostPeerId,guestsPeerIdsCopy,joinRoomId);
     console.log('sending existing',guestsPeerIdsCopy)
     console.log('broadcasted');
+  });
+
+
+  socket.on('need hosting',(ownPeerId,roomID)=>{
+    console.log('need hosting received',roomID)
+    socket.broadcast.to(roomID).emit('hosting asked',ownPeerId);
   });
 
 })

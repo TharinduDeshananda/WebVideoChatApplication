@@ -19,22 +19,28 @@ function MainVideoComponent(props) {
   let [ownSocketIO, setOwnSocketIO] = useState(null);
   let [roomID, setRoomID] = useState(null);
   let [guestUsers, setGuestUsers] = useState([]);
-  let [guestCallsStruct,setGuestCallsStruct] = useState([]);
-
+  let [guestCallsStruct, setGuestCallsStruct] = useState([]);
+  let [muted, setMuted] = useState(false);
+  let [showVideo, setShowVideo] = useState(true);
+  let fullScreenRef = useRef(null);
   useEffect(() => {
     navigator.getUserMedia =
       navigator.getUserMedia ||
       navigator.webkitGetUserMedia ||
       navigator.mozGetUserMedia;
 
-    if(!navigator.getUserMedia){
-      navigator.mediaDevices.getUserMedia({ audio: true, video: true }, (stream) => {
+    if (!navigator.getUserMedia) {
+      navigator.mediaDevices.getUserMedia(
+        { audio: true, video: true },
+        (stream) => {
+          setOwnStream(stream);
+        }
+      );
+    } else {
+      navigator.getUserMedia({ audio: true, video: true }, (stream) => {
         setOwnStream(stream);
       });
     }
-    else{navigator.getUserMedia({ audio: true, video: true }, (stream) => {
-      setOwnStream(stream);
-    });}
     let socket = io("http://localhost:3300/");
     setOwnSocketIO(socket);
     let peer = new Peer(undefined, {
@@ -43,7 +49,7 @@ function MainVideoComponent(props) {
       key: "peerjs",
       path: "/",
     });
-    
+
     setOwnPeer(peer);
     peer.on("open", (id) => {
       setOwnPeerId(id);
@@ -73,26 +79,29 @@ function MainVideoComponent(props) {
       console.log("after guests", guestPeerIds);
     });
 
-    ownSocketIO.on("room joined", (hostCopy, guestsCopy) => {
+    ownSocketIO.on("room joined", (hostCopy, guestsCopy,roomid) => {
+      setRoomID(roomid);
       console.log("room joined");
       console.log("host copy", hostCopy);
       console.log("guests copy", guestsCopy);
       setHostPeerId(hostCopy);
       setGuestPeerIds(guestsCopy);
       let hostCall = ownPeer.call(hostCopy, ownStream);
-      guestCallsStruct.push(hostCall);//****************************************** */
-      setGuestCallsStruct(guestCallsStruct.slice());//**************************** */
+      guestCallsStruct.push(hostCall); //****************************************** */
+      setGuestCallsStruct(guestCallsStruct.slice()); //**************************** */
       hostCall.on("stream", (remoteStream) => {
         setHostStream(remoteStream);
-        console.log("set host stream", remoteStream);
+        console.log('1 put to guest users peer ',hostCall.peer);//   1
+        putToGuestUsers(hostCall.peer, remoteStream);
       });
 
       guestsCopy.forEach((element) => {
         let guestCall = ownPeer.call(element, ownStream);
-        guestCallsStruct.push(guestCall);//****************************************** */
-        setGuestCallsStruct(guestCallsStruct.slice());//**************************** */
+        guestCallsStruct.push(guestCall); //****************************************** */
+        setGuestCallsStruct(guestCallsStruct.slice()); //**************************** */
         guestCall.on("stream", (remoteStream) => {
-          console.log("called guests stream", remoteStream);
+          console.log('2 put to guest users peer ',guestCall.peer);//   2
+          putToGuestUsers(guestCall.peer, remoteStream);
           let flag = false;
           guestsStreams.forEach((stream) => {
             if (stream.id == remoteStream.id) {
@@ -102,17 +111,31 @@ function MainVideoComponent(props) {
           if (flag) {
             return;
           }
-          
+
           guestsStreams.push(remoteStream);
           setGuestsStreams(guestsStreams.slice()); /************ */
         });
       });
     });
 
+    ownSocketIO.on("hosting asked", (peerid) => {
+      console.log('hosting asked by another user',peerid);
+      console.log('current guest users ****',guestUsers);
+      guestUsers.forEach((obj) => {
+        if (obj.pid === peerid) {
+          
+          setHostPeerId(peerid);
+          setHostStream(obj.stream);
+          console.log('host changed to',peerid,obj.stream);
+          return;
+        }
+      });
+    });
+
     ownPeer.on("call", (call) => {
       guestCallsStruct.push(call);
       setGuestCallsStruct(guestCallsStruct.slice());
-      console.log('****-----*****',call);
+      console.log("****-----*****", call);
       call.answer(ownStream);
       call.on("stream", (remoteStream) => {
         let flag = false;
@@ -124,11 +147,11 @@ function MainVideoComponent(props) {
         if (flag) {
           return;
         }
-        
+        console.log('3 put to guest users peer ',call.peer);//   3
+        putToGuestUsers(call.peer, remoteStream);
         guestsStreams.push(remoteStream);
         setGuestsStreams(guestsStreams.slice()); /************** */
-        console.log("guests streams 2", guestsStreams);
-        console.log("hosts stream 2", hostStream);
+        
       });
     });
   }, [ownPeerId, ownStream, ownSocketIO]);
@@ -153,46 +176,87 @@ function MainVideoComponent(props) {
     console.log("joinroominputfieldvalue", joinRoomInputFieldValue);
   }
 
-  function getHostAbility(){}
-  
-  function removeAudioTrack(){}
-  function removeVideoTrack(){}
-  function addVideoTrack(){}
-  function addAudioTrack(){}
-  async function shareScreen(){
-    
-    try{
-      navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia
-      || navigator.mozGetUserMedia;
+  let getHostAbility=()=> {
+    ownSocketIO.emit("need hosting", ownPeerId, roomID);
+    console.log('need hosting emitted',roomID);
+    console.log('current guest users',guestUsers);
+    setHostStream(ownStream);
+    setHostPeerId(ownPeerId);
+  };
 
-      const shareStream = await navigator.mediaDevices.getDisplayMedia(
-        {video: {cursor:'always'}, audio: false});
+  function toggleVideo() {
+    ownStream.getVideoTracks()[0].enabled = !showVideo;
+    setOwnStream(ownStream);
+    setShowVideo((showVideo) => !showVideo);
+  }
+  function toggleAudio() {
+    ownStream.getAudioTracks()[0].enabled = muted;
+    setOwnStream(ownStream);
+    setMuted((muted) => !muted);
+  }
+
+  async function shareScreen() {
+    try {
+      navigator.getUserMedia =
+        navigator.getUserMedia ||
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia;
+
+      const shareStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: "always" },
+        audio: false,
+      });
 
       let existingTracks = ownStream.getVideoTracks();
       let shareTracks = shareStream.getVideoTracks();
       let videoTrack = shareTracks[0];
-      guestCallsStruct.forEach((gcall)=>{
-        let sender = gcall.peerConnection.getSenders().find(function(s) {
+      guestCallsStruct.forEach((gcall) => {
+        let sender = gcall.peerConnection.getSenders().find(function (s) {
           return s.track.kind == videoTrack.kind;
         });
-        console.log('found sender:', sender);
+        console.log("found sender:", sender);
         sender.replaceTrack(videoTrack);
       });
 
-
-
-      existingTracks.forEach(track=>{
-      ownStream.removeTrack(track);
-        
-      })
-      console.log('existing tracks removed: ',existingTracks.length);
-      shareStream.getVideoTracks().forEach(htrack=>{
+      existingTracks.forEach((track) => {
+        ownStream.removeTrack(track);
+      });
+      console.log("existing tracks removed: ", existingTracks.length);
+      shareStream.getVideoTracks().forEach((htrack) => {
         ownStream.addTrack(htrack);
-      })
-    }catch(e){console.log(e);}
+      });
+    } catch (e) {
+      console.log(e);
+    }
   }
-  function messageAll(){}
-  function raiseHand(){}
+  function getFullScreen() {
+    let elem = fullScreenRef.current;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+      /* Safari */
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) {
+      /* IE11 */
+      elem.msRequestFullscreen();
+    }
+  }
+  function messageAll() {}
+  function raiseHand() {}
+  function putToGuestUsers(peerid, rstream) {
+    
+    for(let j=0;j<guestUsers.length;++j){
+      if(guestUsers[j].pid==peerid){
+        guestUsers[j].stream = rstream;
+        setGuestUsers(guestUsers.slice());
+        return;
+      }
+    }
+    guestUsers.push({pid:peerid,stream:rstream});
+    setGuestUsers(guestUsers.slice());
+
+
+  }
 
   return (
     <div className="main-comp">
@@ -222,7 +286,7 @@ function MainVideoComponent(props) {
           </div>
         ) : null}
       </div>
-      <div>
+      <div ref={fullScreenRef}>
         <div>Host Stream</div>
         {hostStream ? (
           <div
@@ -235,18 +299,23 @@ function MainVideoComponent(props) {
             }}
           >
             <VideoComp streamObj={hostStream} />
-            <VideoAppBar share={shareScreen}/>
+            <VideoAppBar
+              gfull={getFullScreen}
+              gshare={shareScreen}
+              ghost={getHostAbility}
+              gaudio={toggleAudio}
+              gvideo={toggleVideo}
+            />
           </div>
         ) : null}
       </div>
       <div>Guests Streams</div>
       <div className="mini-guest-videos">
-        
         {guestsStreams.map((stream) => {
           return <MiniVideoComp streamObj={stream} />;
         })}
       </div>
-      
+      <button onClick={()=>{console.log(guestUsers)}}>get guestUsers</button>
     </div>
   );
 }
