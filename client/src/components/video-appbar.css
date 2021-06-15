@@ -5,7 +5,9 @@
   position: absolute;
   flex-direction: row;
   justify-content: center;
+  flex-wrap: wrap;
   align-items: center;
+  
   bottom: 0px;
   width: 100%;
   border-radius: 16px 16px 0px 0px;
@@ -16,10 +18,11 @@
   z-index: 3;
   background-color: rgba(0, 0, 0, 0.4);
   display: flex;
+  flex-wrap: wrap;
   position: absolute;
   flex-direction: row;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   bottom: 0px;
   width: 100%;
   border-radius: 16px 16px 0px 0px;
@@ -37,5 +40,5 @@
     padding: 12px 20px;
     border-radius: 12px;
     cursor: pointer;
-    margin: 0px 50px;
+    margin: 3px 50px;
 }

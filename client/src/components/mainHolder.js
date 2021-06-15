@@ -5,6 +5,7 @@ import { io } from "socket.io-client";
 import { VideoComp } from "./videoComp";
 import VideoAppBar from "./video_app_bar";
 import MiniVideoComp from "./mini-video-comp";
+import { ChatComponent } from "./chatComponent";
 import "./main-comp.css";
 function MainVideoComponent(props) {
   let joinRoomInputField = useRef(null);
@@ -22,6 +23,8 @@ function MainVideoComponent(props) {
   let [guestCallsStruct, setGuestCallsStruct] = useState([]);
   let [muted, setMuted] = useState(false);
   let [showVideo, setShowVideo] = useState(true);
+  let [showChat,setShowChat] = useState(false);
+  let [chatMessages,setChatMessages] = useState([]);
   let fullScreenRef = useRef(null);
   useEffect(() => {
     navigator.getUserMedia =
@@ -87,6 +90,7 @@ function MainVideoComponent(props) {
       setHostPeerId(hostCopy);
       setGuestPeerIds(guestsCopy);
       let hostCall = ownPeer.call(hostCopy, ownStream);
+      
       guestCallsStruct.push(hostCall); //****************************************** */
       setGuestCallsStruct(guestCallsStruct.slice()); //**************************** */
       hostCall.on("stream", (remoteStream) => {
@@ -95,28 +99,38 @@ function MainVideoComponent(props) {
         putToGuestUsers(hostCall.peer, remoteStream);
         putToGuestStreams(remoteStream);
       });
+      let hostDataConnection = ownPeer.connect(hostCopy);
+      hostDataConnection.on('open',()=>{
+        console.log('data connection host opened');
+        hostDataConnection.on('data',(msg)=>{
+          chatMessages.push({userName:"",msg:msg});
+          setChatMessages(chatMessages.slice());
+          console.log('message received ',msg);
+        })
+        addDataConnectionToUser(hostCopy,hostDataConnection);
+      });
+
 
       guestsCopy.forEach((element) => {
         let guestCall = ownPeer.call(element, ownStream);
+        
         guestCallsStruct.push(guestCall); //****************************************** */
         setGuestCallsStruct(guestCallsStruct.slice()); //**************************** */
         guestCall.on("stream", (remoteStream) => {
           console.log('2 put to guest users peer ',guestCall.peer);//   2
           putToGuestUsers(guestCall.peer, remoteStream);
           putToGuestStreams(remoteStream);
-          // let flag = false;
-          // guestsStreams.forEach((stream) => {
-          //   if (stream.id == remoteStream.id) {
-          //     flag = true;
-          //   }
-          // });
-          // if (flag) {
-          //   return;
-          // }
-
-          // guestsStreams.push(remoteStream);
-          // setGuestsStreams(guestsStreams.slice()); 
         });
+        let guestDataConnection = ownPeer.connect(element);
+        guestDataConnection.on('open',()=>{
+          console.log('guest data connection has opened');
+          guestDataConnection.on('data',msg=>{
+            chatMessages.push({userName:"",msg:msg});
+            setChatMessages(chatMessages.slice());
+            console.log('message received ',msg)
+          });
+          addDataConnectionToUser(element,guestDataConnection);
+        })
       });
     });
 
@@ -140,27 +154,47 @@ function MainVideoComponent(props) {
       console.log("****-----*****", call);
       call.answer(ownStream);
       call.on("stream", (remoteStream) => {
-        // let flag = false;
-        // guestsStreams.forEach((stream) => {
-        //   if (stream.id == remoteStream.id) {
-        //     flag = true;
-        //   }
-        // });
-        // if (flag) {
-        //   return;
-        // }
-        // console.log('3 put to guest users peer ',call.peer);//   3
         
-        // guestsStreams.push(remoteStream);
-        // setGuestsStreams(guestsStreams.slice());
         putToGuestStreams(remoteStream);
         putToGuestUsers(call.peer, remoteStream);
       });
     });
+
+    ownPeer.on('connection',(con)=>{
+      con.on('open',()=>{
+        con.on('data',msg=>{
+          chatMessages.push({userName:"",msg:msg});
+            setChatMessages(chatMessages.slice());
+            console.log('messsage received',msg)
+        });
+        console.log('******************************************************************',con.peer);
+        addDataConnectionToUser(con.peer,con);
+
+      });
+
+      
+
+    })
+
+
+
   }, [ownPeerId, ownStream, ownSocketIO]);
   function onInputChange(event) {
     setJoinRoomInputFieldValue(event.target.value);
   }
+
+  function addDataConnectionToUser(peerid,dataConnection){
+    for(let i=0;i<guestUsers.length;++i){
+      if(guestUsers[i].pid==peerid){
+        guestUsers[i].dataCon = dataConnection;
+        setGuestUsers(guestUsers.slice());
+        return;
+      }
+    }
+    /****************************************************************************************** */
+    console.log('could not find the user to add data connection');
+  }
+
 
   function createRoom() {
     if (!ownSocketIO) {
@@ -244,7 +278,17 @@ function MainVideoComponent(props) {
       elem.msRequestFullscreen();
     }
   }
-  function messageAll() {}
+  function messageAll(msg) {
+    guestUsers.forEach(obj=>{
+      obj.dataCon.send('message from another user '+msg);
+    })
+  }
+  function toggleChat(){
+    setShowChat(chat=>{return !chat;})
+  }
+  
+
+
   function raiseHand() {}
   function putToGuestUsers(peerid, rstream) {
     
@@ -296,7 +340,7 @@ function MainVideoComponent(props) {
               width: "800px",
               height: "600px",
               position: "relative",
-              backgroundColor: "red",
+              backgroundColor: "black",
               zIndex: "1",
             }}
           >
@@ -312,17 +356,19 @@ function MainVideoComponent(props) {
               width: "800px",
               height: "600px",
               position: "relative",
-              backgroundColor: "red",
+              backgroundColor: "black",
               zIndex: "1",
             }}
           >
             <VideoComp streamObj={hostStream} />
+            <ChatComponent messages={chatMessages} show={showChat} messageAll={messageAll}/>
             <VideoAppBar
               gfull={getFullScreen}
               gshare={shareScreen}
               ghost={getHostAbility}
               gaudio={toggleAudio}
               gvideo={toggleVideo}
+              gchat={toggleChat}
             />
           </div>
         ) : null}

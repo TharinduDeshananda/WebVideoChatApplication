@@ -15,7 +15,7 @@ export default function VideoAppBar(props){
         <button onClick={props.gaudio} className="video-bar-item"><FontAwesomeIcon icon={faMicrophone} ></FontAwesomeIcon></button>
         <button onClick={props.gvideo} className="video-bar-item"><FontAwesomeIcon icon={faVideo}></FontAwesomeIcon></button>
         <button onClick={props.gshare} className="video-bar-item"><FontAwesomeIcon icon={faShare}></FontAwesomeIcon></button>
-        <button className="video-bar-item"><FontAwesomeIcon icon={faComments}></FontAwesomeIcon></button>
+        <button onClick={props.gchat}className="video-bar-item"><FontAwesomeIcon icon={faComments}></FontAwesomeIcon></button>
         <button onClick={props.ghost} className="video-bar-item"><FontAwesomeIcon icon={faDesktop}></FontAwesomeIcon></button>
         <button onClick={props.gfull} className="video-bar-item"><FontAwesomeIcon icon={faWindowMaximize}></FontAwesomeIcon></button>
     </div>;
