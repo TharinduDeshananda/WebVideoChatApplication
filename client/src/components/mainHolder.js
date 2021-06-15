@@ -93,6 +93,7 @@ function MainVideoComponent(props) {
         setHostStream(remoteStream);
         console.log('1 put to guest users peer ',hostCall.peer);//   1
         putToGuestUsers(hostCall.peer, remoteStream);
+        putToGuestStreams(remoteStream);
       });
 
       guestsCopy.forEach((element) => {
@@ -102,18 +103,19 @@ function MainVideoComponent(props) {
         guestCall.on("stream", (remoteStream) => {
           console.log('2 put to guest users peer ',guestCall.peer);//   2
           putToGuestUsers(guestCall.peer, remoteStream);
-          let flag = false;
-          guestsStreams.forEach((stream) => {
-            if (stream.id == remoteStream.id) {
-              flag = true;
-            }
-          });
-          if (flag) {
-            return;
-          }
+          putToGuestStreams(remoteStream);
+          // let flag = false;
+          // guestsStreams.forEach((stream) => {
+          //   if (stream.id == remoteStream.id) {
+          //     flag = true;
+          //   }
+          // });
+          // if (flag) {
+          //   return;
+          // }
 
-          guestsStreams.push(remoteStream);
-          setGuestsStreams(guestsStreams.slice()); /************ */
+          // guestsStreams.push(remoteStream);
+          // setGuestsStreams(guestsStreams.slice()); 
         });
       });
     });
@@ -138,20 +140,21 @@ function MainVideoComponent(props) {
       console.log("****-----*****", call);
       call.answer(ownStream);
       call.on("stream", (remoteStream) => {
-        let flag = false;
-        guestsStreams.forEach((stream) => {
-          if (stream.id == remoteStream.id) {
-            flag = true;
-          }
-        });
-        if (flag) {
-          return;
-        }
-        console.log('3 put to guest users peer ',call.peer);//   3
-        putToGuestUsers(call.peer, remoteStream);
-        guestsStreams.push(remoteStream);
-        setGuestsStreams(guestsStreams.slice()); /************** */
+        // let flag = false;
+        // guestsStreams.forEach((stream) => {
+        //   if (stream.id == remoteStream.id) {
+        //     flag = true;
+        //   }
+        // });
+        // if (flag) {
+        //   return;
+        // }
+        // console.log('3 put to guest users peer ',call.peer);//   3
         
+        // guestsStreams.push(remoteStream);
+        // setGuestsStreams(guestsStreams.slice());
+        putToGuestStreams(remoteStream);
+        putToGuestUsers(call.peer, remoteStream);
       });
     });
   }, [ownPeerId, ownStream, ownSocketIO]);
@@ -258,6 +261,21 @@ function MainVideoComponent(props) {
 
   }
 
+  function putToGuestStreams(gstream){
+    for(let i=0;i<guestsStreams.length;++i){
+      if(guestsStreams[i].id==gstream.id){
+        guestsStreams[i]=gstream
+        setGuestsStreams(guestsStreams.slice());
+        console.log('already found stream');
+        return;
+      }
+    }
+    console.log('earlier not found stream');
+    guestsStreams.push(gstream);
+    setGuestsStreams(guestsStreams.slice());
+
+  }
+
   return (
     <div className="main-comp">
       <input
@@ -312,6 +330,7 @@ function MainVideoComponent(props) {
       <div>Guests Streams</div>
       <div className="mini-guest-videos">
         {guestsStreams.map((stream) => {
+          if(stream.id==hostStream.id){return null;}
           return <MiniVideoComp streamObj={stream} />;
         })}
       </div>
