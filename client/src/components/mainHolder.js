@@ -25,6 +25,7 @@ function MainVideoComponent(props) {
   let [showVideo, setShowVideo] = useState(true);
   let [showChat,setShowChat] = useState(false);
   let [chatMessages,setChatMessages] = useState([]);
+  let [isFullScreen,setIsFullScreen] = useState(false);
   let fullScreenRef = useRef(null);
   useEffect(() => {
     navigator.getUserMedia =
@@ -179,6 +180,9 @@ function MainVideoComponent(props) {
 
 
   }, [ownPeerId, ownStream, ownSocketIO]);
+  document.onfullscreenchange=(event)=>{
+    setIsFullScreen(isFullScreen=>(!isFullScreen));
+  }
   function onInputChange(event) {
     setJoinRoomInputFieldValue(event.target.value);
   }
@@ -278,6 +282,9 @@ function MainVideoComponent(props) {
       elem.msRequestFullscreen();
     }
   }
+
+  
+
   function messageAll(msg) {
     guestUsers.forEach(obj=>{
       obj.dataCon.send('message from another user '+msg);
@@ -352,11 +359,18 @@ function MainVideoComponent(props) {
         <div>Host Stream</div>
         {hostStream ? (
           <div
-            style={{
+            style={(!isFullScreen)?{
               width: "800px",
               height: "600px",
               position: "relative",
               backgroundColor: "black",
+              zIndex: "1",
+            }:{
+              width: "100%",
+              height: "100%",
+              position: "relative",
+              backgroundColor: "black",
+              bottom: "30px",
               zIndex: "1",
             }}
           >
