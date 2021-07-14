@@ -52,7 +52,7 @@ io.on('connection',(socket)=>{
 })
 
 
-
+app.use('/static',express.static('public'))
 app.use(cors());
 app.get("/", (req, res, next) => {
   res.send("mainPage");

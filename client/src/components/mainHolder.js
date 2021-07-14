@@ -6,6 +6,8 @@ import { VideoComp } from "./videoComp";
 import VideoAppBar from "./video_app_bar";
 import MiniVideoComp from "./mini-video-comp";
 import { ChatComponent } from "./chatComponent";
+import { Button, TextField, Typography , Grid} from "@material-ui/core";
+
 import "./main-comp.css";
 function MainVideoComponent(props) {
   let joinRoomInputField = useRef(null);
@@ -329,18 +331,42 @@ function MainVideoComponent(props) {
 
   return (
     <div className="main-comp">
-      <input
+      {/* <input
         type="text"
         ref={joinRoomInputField}
         value={joinRoomInputFieldValue}
         onChange={onInputChange}
-      ></input>
+      ></input> */}
+      <Typography variant='h4' >Join a Session</Typography>
+      <TextField
+              id="outlined-full-width"
+              ref={joinRoomInputField}
+              value={joinRoomInputFieldValue}
+              onChange={onInputChange}
+              label="Paste the Session ID here"
+              style={{ margin: 8 }}
+              placeholder="Session ID..."
+              helperText="5213bcfb-6a63-4717-.. etc"
+              fullWidth
+              margin="normal"
+              autoComplete="off"
+              InputLabelProps={{
+                shrink: true,
+              }}
+              variant="outlined"
+            /><Button variant='contained' color='primary' onClick={joinRoom}>Join Session</Button>
       <br />
-      <button onClick={joinRoom}>Join Room</button>
+      {/* <button onClick={joinRoom}>Join Room</button> */}
       <br />
-      <button onClick={createRoom}>Create Room</button>
+      {/* <button onClick={createRoom}>Create Room</button> */}
+      <Typography variant='h4' style={{marginBottom:'10px'}}>OR</Typography>
       <div>
-        <div>Own Stream</div>
+      <Button variant='contained' color='primary' onClick={createRoom} style={{marginBottom:'10px'}} style={{margin:'10px'}}>Create a Session</Button>
+      <Button variant='contained' color='primary' onClick={createRoom} style={{marginBottom:'10px'}} style={{margin:'10px'}} disabled>Invite Others</Button>
+      </div>
+      
+      <div>
+        {/* <div>Own Stream</div> */}
         {!hostStream ? (
           <div
             style={{
@@ -356,7 +382,7 @@ function MainVideoComponent(props) {
         ) : null}
       </div>
       <div ref={fullScreenRef}>
-        <div>Host Stream</div>
+        {/* <div>Host Stream</div> */}
         {hostStream ? (
           <div
             style={(!isFullScreen)?{
@@ -387,14 +413,15 @@ function MainVideoComponent(props) {
           </div>
         ) : null}
       </div>
-      <div>Guests Streams</div>
+      
+      <Typography variant='h4'>Guests Streams</Typography>
       <div className="mini-guest-videos">
         {guestsStreams.map((stream) => {
           if(stream.id==hostStream.id){return null;}
           return <MiniVideoComp streamObj={stream} />;
         })}
       </div>
-      <button onClick={()=>{console.log(guestUsers)}}>get guestUsers</button>
+      {/* <button onClick={()=>{console.log(guestUsers)}}>get guestUsers</button> */}
     </div>
   );
 }
